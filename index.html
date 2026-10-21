@@ -25,14 +25,58 @@ main:before{right:0}main:after{left:0}
 button{border-color:#70472e;background:#875535}
 button:hover{background:#70442f}
 @media(max-width:640px){header:before,header:after{font-size:10px;letter-spacing:2px;top:10px}main:before,main:after{width:5px}.person{width:140px}}
+
+.generation-section{width:100%;text-align:center}.generation-section h3{font-size:1.15rem;margin:12px 0 18px}
+.generation{align-items:center;gap:18px}.person{box-sizing:border-box;width:145px;min-height:0;padding:18px 10px 14px;display:flex;align-items:center;flex-direction:column;gap:9px}
+.person:before,.person:after{margin:0}.person:after{letter-spacing:8px}
+.person img,.photo-placeholder{width:74px;height:74px;flex-shrink:0;border-radius:50%;background:#dfc4a1;object-fit:cover}
+.photo-placeholder{display:flex;align-items:center;justify-content:center;color:#9a6b44;font-size:25px}
+.person strong{display:block;line-height:1.65;overflow-wrap:anywhere;font-size:14px}
+.couple{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%}.marriage-link{color:#875535;font-size:20px}
+@media(max-width:640px){main{padding:10px}.panel{padding:12px}.person{width:126px;padding:14px 7px 10px}.person img,.photo-placeholder{width:62px;height:62px}.person strong{font-size:12px}.couple{gap:3px}.generation{gap:12px}}
+#details:not([hidden]){position:fixed;z-index:20;inset:5vh 4vw auto;max-height:85vh;overflow:auto;max-width:520px;margin:auto;box-shadow:0 0 0 100vmax #26180e88,0 10px 35px #26180e55}
+#details p{margin:12px 0;line-height:1.6}
 </style></head><body><header><h1>🌳 شجرة العائلة</h1><p>تاريخنا وأجيالنا في مكان واحد</p></header><main><section class="panel"><div class="toolbar"><input id="search" placeholder="ابحث عن فرد من العائلة"><button onclick="showForm()">+ إضافة فرد</button><button class="secondary" onclick="exportData()">تصدير نسخة احتياطية</button><label><button class="secondary" type="button" onclick="document.getElementById('import').click()">استيراد البيانات</button><input id="import" type="file" accept="application/json" hidden></label></div><p class="muted" id="count"></p></section><section class="panel" id="formPanel" hidden><h2 id="formTitle">إضافة فرد</h2><form id="form"><div class="fields"><label>الاسم الكامل<input id="name" required maxlength="120"></label><label>الجنس<select id="gender"><option value="male">ذكر</option><option value="female">أنثى</option></select></label><label>تاريخ الميلاد<input id="birth" type="date"></label><label>مكان الميلاد<input id="birthPlace"></label><label>تاريخ الوفاة<input id="death" type="date"></label><label>الأب<select id="father"></select></label><label>الأم<select id="mother"></select></label><label>الزوج / الزوجة<select id="spouse"></select></label><label>الصورة<input id="photo" type="file" accept="image/*"></label></div><p class="muted">الصور تُحفظ في هذا المتصفح. اختر صورة صغيرة لتجنب امتلاء مساحة التخزين.</p><button type="submit">حفظ البيانات</button><button type="button" class="secondary" onclick="hideForm()">إلغاء</button></form></section><section class="panel"><h2>أفراد العائلة حسب الأجيال</h2><div id="tree"></div></section><section class="panel" id="details" hidden></section></main><footer>نسخة تجريبية محلية، لا تتم المزامنة بين الأجهزة</footer><script>
 const KEY='family_tree_v1';let people=[];let editing=null;const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));try{people=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(people))people=[]}catch{people=[]}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(people));render()}catch{alert('تعذر الحفظ. حاول اختيار صورة أصغر أو تصدير نسخة احتياطية.')}}
 function options(id,gender){$(id).innerHTML='<option value="">غير محدد</option>'+people.filter(p=>p.id!==editing&&(!gender||p.gender===gender)).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('')}
 function showForm(id=null){editing=id;const p=people.find(x=>x.id===id)||{};$('formTitle').textContent=id?'تعديل بيانات فرد':'إضافة فرد';['name','birth','birthPlace','death'].forEach(k=>$(k).value=p[k]||'');$('gender').value=p.gender||'male';options('father','male');options('mother','female');options('spouse');['father','mother','spouse'].forEach(k=>$(k).value=p[k]||'');$('photo').value='';$('formPanel').hidden=false;$('formPanel').scrollIntoView({behavior:'smooth'})}function hideForm(){$('formPanel').hidden=true;editing=null}
 function depth(p,seen=new Set()){if(seen.has(p.id))return 0;seen.add(p.id);let parents=[p.father,p.mother].map(id=>people.find(x=>x.id===id)).filter(Boolean);return parents.length?1+Math.max(...parents.map(x=>depth(x,new Set(seen)))):0}
-function render(){const q=$('search').value.trim().toLowerCase();let matches=people.filter(p=>p.name.toLowerCase().includes(q));$('count').textContent=`عدد الأفراد: ${people.length}`;let groups=new Map();matches.forEach(p=>{let d=depth(p);if(!groups.has(d))groups.set(d,[]);groups.get(d).push(p)});$('tree').innerHTML=matches.length?[...groups.entries()].sort((a,b)=>a[0]-b[0]).map(([d,group])=>`<div><h3 style="text-align:center">الجيل ${d+1}</h3><div class="generation">${group.map(p=>`<div class="person" data-id="${escapeHtml(p.id)}"><img src="${p.photo||''}" alt=""><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.birth||'')}</small></div>`).join('')}</div></div>`).join(''):'<p class="muted">لا توجد أسماء. أضف أول فرد في العائلة.</p>';document.querySelectorAll('.person').forEach(el=>el.addEventListener('click',()=>showDetails(el.dataset.id)))}
-function showDetails(id){let p=people.find(x=>x.id===id);if(!p)return;let lookup=id=>people.find(x=>x.id===id)?.name||'غير محدد';$('details').hidden=false;$('details').innerHTML=`<h2>${escapeHtml(p.name)}</h2>${p.photo?`<img src="${p.photo}" alt="صورة شخصية">`:''}<p>تاريخ الميلاد: ${escapeHtml(p.birth||'غير محدد')}</p><p>مكان الميلاد: ${escapeHtml(p.birthPlace||'غير محدد')}</p><p>تاريخ الوفاة: ${escapeHtml(p.death||'غير محدد')}</p><p>الأب: ${escapeHtml(lookup(p.father))}</p><p>الأم: ${escapeHtml(lookup(p.mother))}</p><p>الزوج / الزوجة: ${escapeHtml(lookup(p.spouse))}</p><button id="editBtn">تعديل</button><button id="deleteBtn" class="secondary">حذف</button>`;$('editBtn').onclick=()=>showForm(id);$('deleteBtn').onclick=()=>{if(confirm('هل تريد حذف هذا الفرد؟')){people=people.filter(x=>x.id!==id);people.forEach(x=>{for(let k of ['father','mother','spouse'])if(x[k]===id)x[k]=''});$('details').hidden=true;save()}};$('details').scrollIntoView({behavior:'smooth'})}
-$('form').onsubmit=async e=>{e.preventDefault();let p=people.find(x=>x.id===editing)||{id:crypto.randomUUID(),photo:''};for(let k of ['name','gender','birth','birthPlace','death','father','mother','spouse'])p[k]=$(k).value.trim();let file=$('photo').files[0];if(file){if(file.size>400000) {alert('اختر صورة أقل من 400 كيلوبايت');return}p.photo=await new Promise((resolve,reject)=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}if(!editing)people.push(p);hideForm();save()};$('search').oninput=render;
+function generationMap(){
+ const levels=new Map(people.map(p=>[p.id,depth(p)]));
+ for(const p of people){
+  if(!p.spouse)continue;
+  const spouse=people.find(x=>x.id===p.spouse);
+  if(!spouse)continue;
+  if(!(p.father||p.mother)&&(spouse.father||spouse.mother))levels.set(p.id,levels.get(spouse.id));
+  else if((p.father||p.mother)&&!(spouse.father||spouse.mother))levels.set(spouse.id,levels.get(p.id));
+ }
+ return levels;
+}
+function personCard(p){return `<div class="person" data-id="${escapeHtml(p.id)}">${p.photo?`<img src="${p.photo}" alt="">`:`<span class="photo-placeholder">✦</span>`}<strong>${escapeHtml(p.name)}</strong></div>`}
+function render(){
+ const q=$('search').value.trim().toLowerCase(),levels=generationMap();
+ const matches=people.filter(p=>p.name.toLowerCase().includes(q));
+ $('count').textContent=`عدد الأفراد: ${people.length}`;
+ const groups=new Map();
+ matches.forEach(p=>{const d=levels.get(p.id)||0;if(!groups.has(d))groups.set(d,[]);groups.get(d).push(p)});
+ $('tree').innerHTML=matches.length?[...groups.entries()].sort((a,b)=>a[0]-b[0]).map(([d,group])=>{
+  const used=new Set(),units=[];
+  for(const p of group){
+   if(used.has(p.id))continue;
+   used.add(p.id);
+   const partner=group.find(x=>!used.has(x.id)&&(p.spouse===x.id||x.spouse===p.id));
+   if(partner){used.add(partner.id);units.push(`<div class="couple">${personCard(p)}<span class="marriage-link" title="زوجان">♥</span>${personCard(partner)}</div>`)}
+   else units.push(personCard(p));
+  }
+  return `<div class="generation-section"><h3>الجيل ${d+1}</h3><div class="generation">${units.join('')}</div></div>`
+ }).join(''):'<p class="muted">لا توجد أسماء مطابقة.</p>';
+ document.querySelectorAll('.person').forEach(el=>el.addEventListener('click',()=>showDetails(el.dataset.id)));
+}
+function showDetails(id){let p=people.find(x=>x.id===id);if(!p)return;let lookup=id=>people.find(x=>x.id===id)?.name||'غير محدد';$('details').hidden=false;$('details').innerHTML=`<button type="button" class="secondary" onclick="document.getElementById('details').hidden=true" style="float:left">إغلاق ×</button><h2>${escapeHtml(p.name)}</h2>${p.photo?`<img src="${p.photo}" alt="صورة شخصية">`:''}<p>تاريخ الميلاد: ${escapeHtml(p.birth||'غير محدد')}</p><p>مكان الميلاد: ${escapeHtml(p.birthPlace||'غير محدد')}</p><p>تاريخ الوفاة: ${escapeHtml(p.death||'غير محدد')}</p><p>الأب: ${escapeHtml(lookup(p.father))}</p><p>الأم: ${escapeHtml(lookup(p.mother))}</p><p>الزوج / الزوجة: ${escapeHtml(lookup(p.spouse))}</p><button id="editBtn">تعديل</button><button id="deleteBtn" class="secondary">حذف</button>`;$('editBtn').onclick=()=>showForm(id);$('deleteBtn').onclick=()=>{if(confirm('هل تريد حذف هذا الفرد؟')){people=people.filter(x=>x.id!==id);people.forEach(x=>{for(let k of ['father','mother','spouse'])if(x[k]===id)x[k]=''});$('details').hidden=true;save()}};$('details').scrollIntoView({behavior:'smooth'})}
+$('form').onsubmit=async e=>{e.preventDefault();let p=people.find(x=>x.id===editing)||{id:crypto.randomUUID(),photo:''};for(let k of ['name','gender','birth','birthPlace','death','father','mother','spouse'])p[k]=$(k).value.trim();let file=$('photo').files[0];if(file){if(file.size>400000) {alert('اختر صورة أقل من 400 كيلوبايت');return}p.photo=await new Promise((resolve,reject)=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}if(!editing)people.push(p);
+ people.forEach(x=>{if(x.id!==p.id && x.spouse===p.id && x.id!==p.spouse)x.spouse=''});
+ if(p.spouse){const partner=people.find(x=>x.id===p.spouse);if(partner){people.forEach(x=>{if(x.id!==p.id&&x.id!==partner.id&&x.spouse===partner.id)x.spouse=''});partner.spouse=p.id}}
+ hideForm();save()};$('search').oninput=render;
 function exportData(){let blob=new Blob([JSON.stringify(people,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='family-tree-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}$('import').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data)||!data.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))throw Error();if(confirm('استبدال بيانات الشجرة الحالية بالملف المستورد؟')){people=data;save()}}catch{alert('ملف غير صالح')}e.target.value=''};render();
 </script></body></html>
