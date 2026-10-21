@@ -46,19 +46,21 @@ const firebaseConfig={apiKey:"AIzaSyDxPZNCCDr1-s6wRLerUGz_ZExLZvCqebg",authDomai
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let people=[],editing=null,role='',unsubscribe=null,selectedFamily='',zoom=100;
+let people=[],editing=null,role='',unsubscribe=null,selectedFamily='',zoom=100,authVersion=0;
 const isEditor=()=>['admin','editor'].includes(role),isAdmin=()=>role==='admin';
 const status=s=>$('syncStatus').textContent=s;
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginMessage').textContent='جاري الدخول...';try{await signInWithEmailAndPassword(auth,$('loginEmail').value.trim(),$('loginPassword').value)}catch(e){$('loginMessage').textContent='تعذر الدخول. تأكد من البريد وكلمة المرور.'}};
 $('logoutBtn').onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async user=>{
- if(unsubscribe){unsubscribe();unsubscribe=null}people=[];role='';$('appContent').hidden=true;$('loginPanel').hidden=!user;
- if(!user)return;
- try{const profile=await getDoc(doc(db,'users',user.uid));if(!profile.exists()||profile.data().active!==true||!['admin','editor','viewer'].includes(profile.data().role)){await signOut(auth);$('loginMessage').textContent='حسابك غير مفعل أو لا يملك صلاحية دخول. تحقق من UID وسجل users.';return}
+ const currentVersion=++authVersion;
+ if(unsubscribe){unsubscribe();unsubscribe=null}people=[];role='';$('appContent').hidden=true;$('loginPanel').hidden=false;
+ if(!user){$('loginMessage').textContent='أدخل البريد الإلكتروني وكلمة المرور للدخول.';return;}
+ $('loginMessage').textContent='جاري التحقق من جلسة الدخول المحفوظة...';
+ try{const profile=await getDoc(doc(db,'users',user.uid));if(currentVersion!==authVersion)return;if(!profile.exists()||profile.data().active!==true||!['admin','editor','viewer'].includes(profile.data().role)){await signOut(auth);$('loginMessage').textContent='حسابك غير مفعل أو لا يملك صلاحية دخول. تحقق من UID وسجل users.';return}
  role=profile.data().role;$('welcome').textContent=`مرحباً ${profile.data().name||user.email} (${role})`;$('appContent').hidden=false;$('loginPanel').hidden=true;
  document.querySelectorAll('.editOnly').forEach(el=>el.style.display=isEditor()?'':'none');status('جاري تحميل بيانات العائلة...');
  unsubscribe=onSnapshot(collection(db,'people'),snap=>{people=snap.docs.map(d=>({...d.data(),id:d.id}));status('البيانات متزامنة بين الأجهزة');render()},e=>status('تعذر قراءة البيانات: '+e.code));
- }catch(e){$('loginMessage').textContent='تعذر قراءة صلاحية الحساب: '+e.code;await signOut(auth)}
+ }catch(e){$('loginMessage').textContent='تعذر قراءة صلاحية الحساب: '+(e.code||e.message);await signOut(auth)}
 });
 function options(id,gender){$(id).innerHTML='<option value="">غير محدد</option>'+people.filter(p=>p.id!==editing&&(!gender||p.gender===gender)).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('')}
 window.showForm=(id=null)=>{if(!isEditor())return;editing=id;const p=people.find(x=>x.id===id)||{};$('details').hidden=true;$('formTitle').textContent=id?'تعديل بيانات فرد':'إضافة فرد';['name','birth','birthPlace','death','blood'].forEach(k=>$(k).value=p[k]||'');$('gender').value=p.gender||'male';options('father','male');options('mother','female');options('spouse');['father','mother','spouse'].forEach(k=>$(k).value=p[k]||'');$('photo').value='';$('formPanel').hidden=false;$('formPanel').scrollIntoView({behavior:'smooth'})};
