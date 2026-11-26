@@ -38,6 +38,21 @@ button:hover{background:#70442f}
 #details p{margin:12px 0;line-height:1.6}
 
 #loginPanel{max-width:480px;margin:24px auto}#appContent[hidden],#loginPanel[hidden],#formPanel[hidden],#details[hidden]{display:none!important}.status{padding:9px;border-radius:8px;background:#f1e5d1}.family-nav{display:flex;gap:8px;flex-wrap:wrap}.family-nav button.active{background:#503727}.tree-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tree-viewport{overflow:auto;max-height:75vh;touch-action:pan-x pan-y}.tree-inner{transform-origin:top center;transition:transform .15s}.person{width:125px}.person strong{font-size:12px}.person img,.photo-placeholder{width:62px;height:62px}.generation{gap:10px}.couple{gap:2px}#details{background:#fff8ec}.person:focus-visible{outline:3px solid #d5b58e}
+
+.family-forest,.family-children{display:flex;list-style:none;margin:0;padding:0;inline-size:max-content}
+.family-forest{margin-inline:auto;gap:38px;padding:12px 16px 22px;max-width:none}
+#tree:has(.family-forest){display:block;inline-size:max-content;min-inline-size:100%}
+.family-forest>li,.family-children>li,.family-unit{display:flex;flex-direction:column;align-items:center;position:relative}
+.family-units{display:flex;align-items:flex-start;justify-content:center;gap:18px}
+.family-children{--connector:#a37653;position:relative;padding-block-start:22px}
+.family-children::before{content:"";position:absolute;inset-block-start:0;inset-inline-start:50%;height:22px;border-inline-start:2px solid var(--connector)}
+.family-children>li{padding:22px 10px 0}
+.family-children>li::before,.family-children>li::after{content:"";position:absolute;inset-block-start:0;inline-size:50%;border-block-start:2px solid var(--connector);pointer-events:none}
+.family-children>li::before{inset-inline-start:0}
+.family-children>li::after{inset-inline-end:0;block-size:22px;border-inline-start:2px solid var(--connector)}
+.family-children>li:first-child::before,.family-children>li:last-child::after{border-block-start:0}
+.family-children .person,.family-forest .person{box-sizing:border-box;flex:none}
+.family-forest .couple{max-width:none}
 </style></head><body><header><h1>🌳 شجرة العائلة</h1><p>تاريخنا وأجيالنا في مكان واحد</p></header><main><section class="panel" id="loginPanel"><h2>دخول أعضاء العائلة</h2><form id="loginForm"><div class="fields"><label>البريد الإلكتروني<input id="loginEmail" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required></label></div><button type="submit">دخول</button></form><p class="muted" id="loginMessage">الحسابات ينشئها المدير فقط.</p></section><div id="appContent" hidden><section class="panel"><div class="toolbar"><span id="welcome"></span><button id="manageUsersBtn" hidden>إدارة الأعضاء</button><button class="secondary" id="logoutBtn">تسجيل خروج</button></div><p class="status" id="syncStatus">جاري الاتصال...</p></section><section class="panel" id="usersPanel" hidden><h2>إدارة الأعضاء</h2><p class="muted">أنشئ حساباً جديداً من هنا مباشرة. الحسابات لا تستطيع مشاهدة بيانات العائلة إلا بعد اعتماد صلاحياتها. لتعديل عضو موجود اضغط «تعديل» بجانب اسمه.</p><form id="memberForm"><div class="fields"><label>UID (يظهر عند تعديل عضو فقط)<input id="memberUid" readonly placeholder="يُنشأ تلقائياً"></label><label>البريد الإلكتروني للعضو الجديد<input id="memberEmail" type="email" autocomplete="off" placeholder="name@example.com"></label><label>كلمة مرور العضو الجديد<input id="memberPassword" type="password" autocomplete="new-password" minlength="6" placeholder="6 أحرف على الأقل"></label><label>اسم العضو<input id="memberName" required></label><label>الصلاحية<select id="memberRole"><option value="viewer">Viewer - مشاهدة</option><option value="editor">Editor - إضافة وتعديل</option><option value="admin">Admin - مدير</option></select></label><label>الحالة<select id="memberActive"><option value="true">مفعل</option><option value="false">معطل</option></select></label></div><button type="submit">حفظ العضو</button><button type="button" class="secondary" id="clearMember">إلغاء التعديل</button></form><p class="muted" id="memberMessage"></p><div id="membersList"></div></section><section class="panel"><div class="toolbar"><input id="search" placeholder="ابحث عن فرد من العائلة"><button class="editOnly" onclick="showForm()">+ إضافة فرد</button><button class="secondary" onclick="exportData()">تصدير نسخة احتياطية</button><label class="editOnly"><button class="secondary" type="button" onclick="document.getElementById('import').click()">استيراد البيانات</button><input id="import" type="file" accept="application/json" hidden></label></div><p class="muted" id="count"></p></section><section class="panel" id="formPanel" hidden><h2 id="formTitle">إضافة فرد</h2><form id="form"><div class="fields"><label>الاسم الكامل<input id="name" required maxlength="120"></label><label>الجنس<select id="gender"><option value="male">ذكر</option><option value="female">أنثى</option></select></label><label>تاريخ الميلاد<input id="birth" type="date"></label><label>مكان الميلاد<input id="birthPlace"></label><label>تاريخ الوفاة<input id="death" type="date"></label><label>الأب<select id="father"></select></label><label>الأم<select id="mother"></select></label><label>الزوج / الزوجة<select id="spouse"></select></label><label>فصيلة الدم<select id="blood"><option value="">غير محدد</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></label><label>الصورة<input id="photo" type="file" accept="image/*"></label></div><p class="muted">الصورة السابقة تبقى عند التعديل إذا لم تختر صورة جديدة. تُضغط الصور قبل الحفظ في قاعدة البيانات.</p><button type="submit">حفظ البيانات</button><button type="button" class="secondary" onclick="hideForm()">إلغاء</button></form></section><section class="panel"><h2>شجرة العائلة</h2><div class="family-nav" id="familyNav"></div><div class="tree-controls"><button class="secondary" id="zoomOut">−</button><span id="zoomValue">100%</span><button class="secondary" id="zoomIn">+</button></div><div class="tree-viewport"><div class="tree-inner" id="tree"></div></div></section><section class="panel" id="details" hidden></section></div></main><footer>شجرة العائلة، البيانات المشتركة عبر Firebase</footer><script type="module">
 import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPassword,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -97,16 +112,73 @@ $('memberForm').onsubmit=async e=>{
 function options(id,gender){$(id).innerHTML='<option value="">غير محدد</option>'+people.filter(p=>p.id!==editing&&(!gender||p.gender===gender)).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('')}
 window.showForm=(id=null)=>{if(!isEditor())return;editing=id;const p=people.find(x=>x.id===id)||{};$('details').hidden=true;$('formTitle').textContent=id?'تعديل بيانات فرد':'إضافة فرد';['name','birth','birthPlace','death','blood'].forEach(k=>$(k).value=p[k]||'');$('gender').value=p.gender||'male';options('father','male');options('mother','female');options('spouse');['father','mother','spouse'].forEach(k=>$(k).value=p[k]||'');$('photo').value='';$('formPanel').hidden=false;$('formPanel').scrollIntoView({behavior:'smooth'})};
 window.hideForm=()=>{$('formPanel').hidden=true;editing=null};
-function depth(p,seen=new Set()){if(seen.has(p.id))return 0;seen.add(p.id);let parents=[p.father,p.mother].map(id=>people.find(x=>x.id===id)).filter(Boolean);return parents.length?1+Math.max(...parents.map(x=>depth(x,new Set(seen)))):0}
-function generationMap(){const levels=new Map(people.map(p=>[p.id,depth(p)]));for(let i=0;i<people.length;i++){let changed=false;for(const p of people){if(!p.spouse)continue;let partner=people.find(x=>x.id===p.spouse);if(!partner)continue;let d=Math.max(levels.get(p.id)||0,levels.get(partner.id)||0);if(levels.get(p.id)!==d||levels.get(partner.id)!==d){levels.set(p.id,d);levels.set(partner.id,d);changed=true}}if(!changed)break}return levels}
 function familyRoots(){return people.filter(p=>!p.father&&!p.mother&&!people.some(x=>x.spouse===p.id&& (x.father||x.mother))).sort((a,b)=>a.name.localeCompare(b.name,'ar'))}
 function descendants(rootId){const ids=new Set([rootId]);let changed=true;while(changed){changed=false;for(const p of people){if((ids.has(p.father)||ids.has(p.mother)||ids.has(p.spouse))&&!ids.has(p.id)){ids.add(p.id);changed=true}}}return ids}
 function personCard(p){return `<div class="person" tabindex="0" role="button" data-id="${escapeHtml(p.id)}">${p.photo?`<img src="${escapeHtml(p.photo)}" alt="">`:'<span class="photo-placeholder">✦</span>'}<strong>${escapeHtml(p.name)}</strong></div>`}
-function render(){const q=$('search').value.trim().toLowerCase(),levels=generationMap();const roots=familyRoots();$('count').textContent=`عدد الأفراد: ${people.length}`;
+function branchForest(members) {
+ const byId = new Map(members.map(person => [person.id, person]));
+ const partners = new Map();
+ const children = new Map();
+ const parentOf = new Map();
+ for (const person of members) {
+  if (person.spouse !== person.id && byId.has(person.spouse)) {
+   partners.set(person.id, person.spouse);
+   if (!partners.has(person.spouse)) partners.set(person.spouse, person.id);
+  }
+  const parent = [person.father, person.mother].find(id => id !== person.id && byId.has(id));
+  if (!parent || person.id === selectedFamily) continue;
+  parentOf.set(person.id, parent);
+  if (!children.has(parent)) children.set(parent, []);
+  children.get(parent).push(person);
+ }
+ const rendered = new Set();
+ const paired = new Set();
+ function cards(person, partner) {
+  if (!partner) return personCard(person);
+  paired.add(partner.id);
+  return `<div class="couple">${personCard(person)}<span class="marriage-link" aria-hidden="true">◆</span>${personCard(partner)}</div>`;
+ }
+ function branch(person) {
+  rendered.add(person.id);
+  const groups = new Map();
+  for (const child of children.get(person.id) || []) {
+   if (rendered.has(child.id)) continue;
+   const other = [child.father, child.mother].find(id => id !== person.id && id !== child.id && byId.has(id)) || '';
+   if (!groups.has(other)) groups.set(other, []);
+   groups.get(other).push(child);
+  }
+  const spouse = byId.get(partners.get(person.id));
+  if (!groups.size) return `<li>${cards(person, parentsAside(person, spouse) ? spouse : null)}</li>`;
+  const sections = [...groups].map(([other, siblings]) => {
+   const nested = siblings.filter(child => !rendered.has(child.id)).map(branch);
+   if (!nested.length) return '';
+   return `<div class="family-unit">${cards(person, byId.get(other))}<ul class="family-children">${nested.join('')}</ul></div>`;
+  });
+  if (spouse && !groups.has(spouse.id) && parentsAside(person, spouse)) {
+   sections.push(`<div class="family-unit">${cards(person, spouse)}</div>`);
+  }
+  return `<li><div class="family-units">${sections.join('')}</div></li>`;
+ }
+ function parentsAside(person, spouse) {
+  return spouse && spouse.id !== person.id && !rendered.has(spouse.id);
+ }
+ const roots = members.filter(person => !parentOf.has(person.id));
+ roots.sort((a,b) => Number(b.id === selectedFamily) - Number(a.id === selectedFamily)
+  || Number(children.has(b.id)) - Number(children.has(a.id)));
+ const forest = roots.filter(person => children.has(person.id)).map(branch);
+ for (const person of [...roots, ...members]) {
+  if (!rendered.has(person.id) && (!paired.has(person.id) || parentOf.has(person.id) || children.has(person.id))) forest.push(branch(person));
+ }
+ return `<ul class="family-forest">${forest.join('')}</ul>`;
+}
+function render(){const q=$('search').value.trim().toLowerCase();const roots=familyRoots();$('count').textContent=`عدد الأفراد: ${people.length}`;
  $('familyNav').innerHTML=`<button data-family="" class="${!selectedFamily?'active':''}">جميع العوائل</button>`+roots.map(p=>`<button data-family="${escapeHtml(p.id)}" class="${selectedFamily===p.id?'active':''}">${escapeHtml(p.name)}</button>`).join('');
  $('familyNav').querySelectorAll('button').forEach(b=>b.onclick=()=>{selectedFamily=b.dataset.family;render()});
- const ids=selectedFamily?descendants(selectedFamily):null;const matches=people.filter(p=>(!ids||ids.has(p.id))&&p.name.toLowerCase().includes(q));const groups=new Map();matches.forEach(p=>{const d=levels.get(p.id)||0;if(!groups.has(d))groups.set(d,[]);groups.get(d).push(p)});
- $('tree').innerHTML=matches.length?[...groups.entries()].sort((a,b)=>a[0]-b[0]).map(([d,group])=>{const used=new Set(),units=[];for(const p of group){if(used.has(p.id))continue;used.add(p.id);const partner=group.find(x=>!used.has(x.id)&&(p.spouse===x.id||x.spouse===p.id));if(partner){used.add(partner.id);units.push(`<div class="couple">${personCard(p)}<span class="marriage-link">♥</span>${personCard(partner)}</div>`)}else units.push(personCard(p))}return `<div class="generation-section"><h3>الجيل ${d+1}</h3><div class="generation">${units.join('')}</div></div>`}).join(''):'<p class="muted">لا توجد أسماء مطابقة.</p>';
+ const ids=selectedFamily?descendants(selectedFamily):null;
+ const members=people.filter(person=>!ids||ids.has(person.id));
+ const matches=q?members.filter(person=>person.name.toLowerCase().includes(q)):members;
+ $('tree').innerHTML=!matches.length?'<p class="muted">لا توجد أسماء مطابقة.</p>'
+  :q?`<div class="generation">${matches.map(personCard).join('')}</div>`:branchForest(members);
  $('tree').querySelectorAll('.person').forEach(el=>{el.onclick=()=>showDetails(el.dataset.id);el.onkeydown=e=>{if(e.key==='Enter')showDetails(el.dataset.id)}});
 }
 function showDetails(id){const p=people.find(x=>x.id===id);if(!p)return;const lookup=id=>people.find(x=>x.id===id)?.name||'غير محدد';$('details').hidden=false;$('details').innerHTML=`<button type="button" class="secondary" id="closeDetails" style="float:left">إغلاق ×</button><h2>${escapeHtml(p.name)}</h2>${p.photo?`<img src="${escapeHtml(p.photo)}" alt="صورة شخصية">`:''}<p>تاريخ الميلاد: ${escapeHtml(p.birth||'غير محدد')}</p><p>مكان الميلاد: ${escapeHtml(p.birthPlace||'غير محدد')}</p><p>تاريخ الوفاة: ${escapeHtml(p.death||'غير محدد')}</p><p>فصيلة الدم: ${escapeHtml(p.blood||'غير محدد')}</p><p>الأب: ${escapeHtml(lookup(p.father))}</p><p>الأم: ${escapeHtml(lookup(p.mother))}</p><p>الزوج / الزوجة: ${escapeHtml(lookup(p.spouse))}</p>${isEditor()?'<button id="editBtn">تعديل</button>':''}${isAdmin()?'<button id="deleteBtn" class="secondary">حذف</button>':''}`;
