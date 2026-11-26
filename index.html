@@ -53,6 +53,12 @@ button:hover{background:#70442f}
 .family-children>li:first-child::before,.family-children>li:last-child::after{border-block-start:0}
 .family-children .person,.family-forest .person{box-sizing:border-box;flex:none}
 .family-forest .couple{max-width:none}
+.family-children[hidden]{display:none}
+.branch-card{display:flex;flex-direction:column;align-items:stretch}
+.branch-card .person[aria-expanded]{cursor:pointer}
+.branch-details{padding:3px 8px;margin:5px auto;font-size:.72rem}
+.branch-card .person[aria-expanded] strong::after{content:" +"}
+.branch-card .person[aria-expanded="true"] strong::after{content:" −"}
 </style></head><body><header><h1>🌳 شجرة العائلة</h1><p>تاريخنا وأجيالنا في مكان واحد</p></header><main><section class="panel" id="loginPanel"><h2>دخول أعضاء العائلة</h2><form id="loginForm"><div class="fields"><label>البريد الإلكتروني<input id="loginEmail" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required></label></div><button type="submit">دخول</button></form><p class="muted" id="loginMessage">الحسابات ينشئها المدير فقط.</p></section><div id="appContent" hidden><section class="panel"><div class="toolbar"><span id="welcome"></span><button id="manageUsersBtn" hidden>إدارة الأعضاء</button><button class="secondary" id="logoutBtn">تسجيل خروج</button></div><p class="status" id="syncStatus">جاري الاتصال...</p></section><section class="panel" id="usersPanel" hidden><h2>إدارة الأعضاء</h2><p class="muted">أنشئ حساباً جديداً من هنا مباشرة. الحسابات لا تستطيع مشاهدة بيانات العائلة إلا بعد اعتماد صلاحياتها. لتعديل عضو موجود اضغط «تعديل» بجانب اسمه.</p><form id="memberForm"><div class="fields"><label>UID (يظهر عند تعديل عضو فقط)<input id="memberUid" readonly placeholder="يُنشأ تلقائياً"></label><label>البريد الإلكتروني للعضو الجديد<input id="memberEmail" type="email" autocomplete="off" placeholder="name@example.com"></label><label>كلمة مرور العضو الجديد<input id="memberPassword" type="password" autocomplete="new-password" minlength="6" placeholder="6 أحرف على الأقل"></label><label>اسم العضو<input id="memberName" required></label><label>الصلاحية<select id="memberRole"><option value="viewer">Viewer - مشاهدة</option><option value="editor">Editor - إضافة وتعديل</option><option value="admin">Admin - مدير</option></select></label><label>الحالة<select id="memberActive"><option value="true">مفعل</option><option value="false">معطل</option></select></label></div><button type="submit">حفظ العضو</button><button type="button" class="secondary" id="clearMember">إلغاء التعديل</button></form><p class="muted" id="memberMessage"></p><div id="membersList"></div></section><section class="panel"><div class="toolbar"><input id="search" placeholder="ابحث عن فرد من العائلة"><button class="editOnly" onclick="showForm()">+ إضافة فرد</button><button class="secondary" onclick="exportData()">تصدير نسخة احتياطية</button><label class="editOnly"><button class="secondary" type="button" onclick="document.getElementById('import').click()">استيراد البيانات</button><input id="import" type="file" accept="application/json" hidden></label></div><p class="muted" id="count"></p></section><section class="panel" id="formPanel" hidden><h2 id="formTitle">إضافة فرد</h2><form id="form"><div class="fields"><label>الاسم الكامل<input id="name" required maxlength="120"></label><label>الجنس<select id="gender"><option value="male">ذكر</option><option value="female">أنثى</option></select></label><label>تاريخ الميلاد<input id="birth" type="date"></label><label>مكان الميلاد<input id="birthPlace"></label><label>تاريخ الوفاة<input id="death" type="date"></label><label>الأب<select id="father"></select></label><label>الأم<select id="mother"></select></label><label>الزوج / الزوجة<select id="spouse"></select></label><label>فصيلة الدم<select id="blood"><option value="">غير محدد</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></label><label>الصورة<input id="photo" type="file" accept="image/*"></label></div><p class="muted">الصورة السابقة تبقى عند التعديل إذا لم تختر صورة جديدة. تُضغط الصور قبل الحفظ في قاعدة البيانات.</p><button type="submit">حفظ البيانات</button><button type="button" class="secondary" onclick="hideForm()">إلغاء</button></form></section><section class="panel"><h2>شجرة العائلة</h2><div class="family-nav" id="familyNav"></div><div class="tree-controls"><button class="secondary" id="zoomOut">−</button><span id="zoomValue">100%</span><button class="secondary" id="zoomIn">+</button></div><div class="tree-viewport"><div class="tree-inner" id="tree"></div></div></section><section class="panel" id="details" hidden></section></div></main><footer>شجرة العائلة، البيانات المشتركة عبر Firebase</footer><script type="module">
 import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPassword,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -115,6 +121,7 @@ window.hideForm=()=>{$('formPanel').hidden=true;editing=null};
 function familyRoots(){return people.filter(p=>!p.father&&!p.mother&&!people.some(x=>x.spouse===p.id&& (x.father||x.mother))).sort((a,b)=>a.name.localeCompare(b.name,'ar'))}
 function descendants(rootId){const ids=new Set([rootId]);let changed=true;while(changed){changed=false;for(const p of people){if((ids.has(p.father)||ids.has(p.mother)||ids.has(p.spouse))&&!ids.has(p.id)){ids.add(p.id);changed=true}}}return ids}
 function personCard(p){return `<div class="person" tabindex="0" role="button" data-id="${escapeHtml(p.id)}">${p.photo?`<img src="${escapeHtml(p.photo)}" alt="">`:'<span class="photo-placeholder">✦</span>'}<strong>${escapeHtml(p.name)}</strong></div>`}
+let branchNumber=0;
 function branchForest(members) {
  const byId = new Map(members.map(person => [person.id, person]));
  const partners = new Map();
@@ -133,10 +140,13 @@ function branchForest(members) {
  }
  const rendered = new Set();
  const paired = new Set();
- function cards(person, partner) {
-  if (!partner) return personCard(person);
+ function cards(person, partner, childListId) {
+  const card=childListId
+   ? `<div class="branch-card">${personCard(person).replace('role="button"', `role="button" aria-expanded="false" aria-controls="${childListId}"`)}<button type="button" class="secondary branch-details" data-id="${escapeHtml(person.id)}">التفاصيل</button></div>`
+   : personCard(person);
+  if (!partner) return card;
   paired.add(partner.id);
-  return `<div class="couple">${personCard(person)}<span class="marriage-link" aria-hidden="true">◆</span>${personCard(partner)}</div>`;
+  return `<div class="couple">${card}<span class="marriage-link" aria-hidden="true">◆</span>${personCard(partner)}</div>`;
  }
  function branch(person) {
   rendered.add(person.id);
@@ -149,15 +159,10 @@ function branchForest(members) {
   }
   const spouse = byId.get(partners.get(person.id));
   if (!groups.size) return `<li>${cards(person, parentsAside(person, spouse) ? spouse : null)}</li>`;
-  const sections = [...groups].map(([other, siblings]) => {
-   const nested = siblings.filter(child => !rendered.has(child.id)).map(branch);
-   if (!nested.length) return '';
-   return `<div class="family-unit">${cards(person, byId.get(other))}<ul class="family-children">${nested.join('')}</ul></div>`;
-  });
-  if (spouse && !groups.has(spouse.id) && parentsAside(person, spouse)) {
-   sections.push(`<div class="family-unit">${cards(person, spouse)}</div>`);
-  }
-  return `<li><div class="family-units">${sections.join('')}</div></li>`;
+  const nested = [...groups.values()].flat().filter(child => !rendered.has(child.id)).map(branch);
+  const childListId = 'branch-children-' + (++branchNumber);
+  const partner = spouse || (groups.size === 1 ? byId.get(groups.keys().next().value) : null);
+  return `<li>${cards(person, partner, childListId)}<ul id="${childListId}" class="family-children" hidden>${nested.join('')}</ul></li>`;
  }
  function parentsAside(person, spouse) {
   return spouse && spouse.id !== person.id && !rendered.has(spouse.id);
@@ -179,7 +184,24 @@ function render(){const q=$('search').value.trim().toLowerCase();const roots=fam
  const matches=q?members.filter(person=>person.name.toLowerCase().includes(q)):members;
  $('tree').innerHTML=!matches.length?'<p class="muted">لا توجد أسماء مطابقة.</p>'
   :q?`<div class="generation">${matches.map(personCard).join('')}</div>`:branchForest(members);
- $('tree').querySelectorAll('.person').forEach(el=>{el.onclick=()=>showDetails(el.dataset.id);el.onkeydown=e=>{if(e.key==='Enter')showDetails(el.dataset.id)}});
+ $('tree').querySelectorAll('.person').forEach(el=>{
+  el.onclick=()=>{
+   const children=$(el.getAttribute('aria-controls'));
+   if(!children){showDetails(el.dataset.id);return}
+   const opening=children.hidden;
+   const siblings=children.parentElement.parentElement;
+   for(const sibling of siblings.children){
+    for(const open of sibling.querySelectorAll('[aria-expanded="true"]')){
+     $(open.getAttribute('aria-controls')).hidden=true;
+     open.setAttribute('aria-expanded','false');
+    }
+   }
+   children.hidden=!opening;
+   el.setAttribute('aria-expanded',String(opening));
+  };
+  el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click()}};
+ });
+ $('tree').querySelectorAll('.branch-details').forEach(el=>el.onclick=()=>showDetails(el.dataset.id));
 }
 function showDetails(id){const p=people.find(x=>x.id===id);if(!p)return;const lookup=id=>people.find(x=>x.id===id)?.name||'غير محدد';$('details').hidden=false;$('details').innerHTML=`<button type="button" class="secondary" id="closeDetails" style="float:left">إغلاق ×</button><h2>${escapeHtml(p.name)}</h2>${p.photo?`<img src="${escapeHtml(p.photo)}" alt="صورة شخصية">`:''}<p>تاريخ الميلاد: ${escapeHtml(p.birth||'غير محدد')}</p><p>مكان الميلاد: ${escapeHtml(p.birthPlace||'غير محدد')}</p><p>تاريخ الوفاة: ${escapeHtml(p.death||'غير محدد')}</p><p>فصيلة الدم: ${escapeHtml(p.blood||'غير محدد')}</p><p>الأب: ${escapeHtml(lookup(p.father))}</p><p>الأم: ${escapeHtml(lookup(p.mother))}</p><p>الزوج / الزوجة: ${escapeHtml(lookup(p.spouse))}</p>${isEditor()?'<button id="editBtn">تعديل</button>':''}${isAdmin()?'<button id="deleteBtn" class="secondary">حذف</button>':''}`;
  $('closeDetails').onclick=()=>$('details').hidden=true;if(isEditor())$('editBtn').onclick=()=>window.showForm(id);if(isAdmin())$('deleteBtn').onclick=async()=>{if(!confirm('هل تريد حذف هذا الفرد؟'))return;try{const batch=writeBatch(db);batch.delete(doc(db,'people',id));for(const x of people){if([x.father,x.mother,x.spouse].includes(id)){let next={...x};for(const k of ['father','mother','spouse'])if(next[k]===id)next[k]='';delete next.id;batch.set(doc(db,'people',x.id),next)}}await batch.commit();$('details').hidden=true}catch(e){alert('فشل الحذف: '+e.message)}};
